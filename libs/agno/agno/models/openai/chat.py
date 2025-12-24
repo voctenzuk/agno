@@ -8,7 +8,7 @@ import httpx
 from pydantic import BaseModel
 
 from agno.exceptions import ModelAuthenticationError, ModelProviderError
-from agno.media import Audio
+from agno.media import Audio, Image
 from agno.models.base import Model
 from agno.models.message import Message
 from agno.models.metrics import Metrics
@@ -810,6 +810,33 @@ class OpenAIChat(Model):
                     )
             except Exception as e:
                 log_warning(f"Error processing audio: {e}")
+
+        # Extract images from model_extra (for providers like OpenRouter that return images this way)
+        if hasattr(response_message, "model_extra") and response_message.model_extra:
+            try:
+                extra_data = response_message.model_extra
+                if isinstance(extra_data, dict) and "images" in extra_data:
+                    images_data = extra_data["images"]
+                    if images_data and isinstance(images_data, list):
+                        if model_response.images is None:
+                            model_response.images = []
+
+                        for img_item in images_data:
+                            if isinstance(img_item, dict) and img_item.get("type") == "image_url":
+                                image_url = img_item.get("image_url", {}).get("url")
+                                if image_url:
+                                    if isinstance(image_url, str) and image_url.startswith("data:"):
+                                        data_header, _, base64_data = image_url.partition(",")
+                                        mime_type = None
+                                        if ";base64" in data_header:
+                                            mime_type = data_header[5:].split(";")[0] or None
+                                        model_response.images.append(
+                                            Image.from_base64(base64_data, mime_type=mime_type)
+                                        )
+                                    else:
+                                        model_response.images.append(Image(url=image_url))
+            except Exception:
+                pass
 
         if hasattr(response_message, "reasoning_content") and response_message.reasoning_content is not None:  # type: ignore
             model_response.reasoning_content = response_message.reasoning_content  # type: ignore
