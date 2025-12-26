@@ -438,6 +438,8 @@ class Agent:
     # Enable debug logs
     debug_mode: bool = False
     debug_level: Literal[1, 2] = 1
+    # Raise errors instead of returning them in RunOutput
+    raise_on_error: bool = False
 
     # --- Telemetry ---
     # telemetry=True logs minimal telemetry for analytics
@@ -546,6 +548,7 @@ class Agent:
         add_culture_to_context: Optional[bool] = None,
         debug_mode: bool = False,
         debug_level: Literal[1, 2] = 1,
+        raise_on_error: bool = False,
         telemetry: bool = True,
     ):
         self.model = model  # type: ignore[assignment]
@@ -692,6 +695,7 @@ class Agent:
             log_warning(f"Invalid debug level: {debug_level}. Setting to 1.")
             debug_level = 1
         self.debug_level = debug_level
+        self.raise_on_error = raise_on_error
         self.telemetry = telemetry
 
         # If we are caching the agent session
@@ -975,6 +979,7 @@ class Agent:
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
+        raise_on_error: bool = False,
         debug_mode: Optional[bool] = None,
         background_tasks: Optional[Any] = None,
         **kwargs: Any,
@@ -1187,6 +1192,9 @@ class Agent:
                         run_response=run_response, session=session, run_context=run_context, user_id=user_id
                     )
 
+                    if raise_on_error:
+                        raise
+
                     return run_response
                 except (InputCheckError, OutputCheckError) as e:
                     # Handle exceptions during streaming
@@ -1200,6 +1208,9 @@ class Agent:
                     self._cleanup_and_store(
                         run_response=run_response, session=session, run_context=run_context, user_id=user_id
                     )
+
+                    if raise_on_error:
+                        raise
 
                     return run_response
                 except KeyboardInterrupt:
@@ -1662,6 +1673,7 @@ class Agent:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> RunOutput: ...
@@ -1692,6 +1704,7 @@ class Agent:
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
         yield_run_response: Optional[bool] = None,  # To be deprecated: use yield_run_output instead
         yield_run_output: bool = False,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> Iterator[Union[RunOutputEvent, RunOutput]]: ...
@@ -1721,6 +1734,7 @@ class Agent:
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
         yield_run_response: Optional[bool] = None,  # To be deprecated: use yield_run_output instead
         yield_run_output: Optional[bool] = None,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> Union[RunOutput, Iterator[Union[RunOutputEvent, RunOutput]]]:
@@ -1756,6 +1770,7 @@ class Agent:
 
         # Validate input against input_schema if provided
         validated_input = validate_input(input, self.input_schema)
+        raise_on_error = self.raise_on_error if raise_on_error is None else raise_on_error
 
         # Normalise hook & guardails
         if not self._hooks_normalised:
@@ -1910,6 +1925,7 @@ class Agent:
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
                 response_format=response_format,
+                raise_on_error=raise_on_error,
                 debug_mode=debug_mode,
                 background_tasks=background_tasks,
                 **kwargs,
@@ -1926,6 +1942,7 @@ class Agent:
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
+        raise_on_error: bool = False,
         debug_mode: Optional[bool] = None,
         background_tasks: Optional[Any] = None,
         **kwargs: Any,
@@ -2177,6 +2194,9 @@ class Agent:
                         user_id=user_id,
                     )
 
+                    if raise_on_error:
+                        raise
+
                     return run_response
                 except (InputCheckError, OutputCheckError) as e:
                     # Handle exceptions during streaming
@@ -2193,6 +2213,9 @@ class Agent:
                         run_context=run_context,
                         user_id=user_id,
                     )
+
+                    if raise_on_error:
+                        raise
 
                     return run_response
 
@@ -2742,6 +2765,7 @@ class Agent:
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> RunOutput: ...
@@ -2771,6 +2795,7 @@ class Agent:
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
         yield_run_response: Optional[bool] = None,  # To be deprecated: use yield_run_output instead
         yield_run_output: Optional[bool] = None,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> AsyncIterator[Union[RunOutputEvent, RunOutput]]: ...
@@ -2800,6 +2825,7 @@ class Agent:
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
         yield_run_response: Optional[bool] = None,  # To be deprecated: use yield_run_output instead
         yield_run_output: Optional[bool] = None,
+        raise_on_error: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
         **kwargs: Any,
     ) -> Union[RunOutput, AsyncIterator[RunOutputEvent]]:
@@ -2828,6 +2854,7 @@ class Agent:
 
         # 2. Validate input against input_schema if provided
         validated_input = validate_input(input, self.input_schema)
+        raise_on_error = self.raise_on_error if raise_on_error is None else raise_on_error
 
         # Normalise hooks & guardails
         if not self._hooks_normalised:
@@ -2971,6 +2998,7 @@ class Agent:
                 add_history_to_context=add_history,
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
+                raise_on_error=raise_on_error,
                 debug_mode=debug_mode,
                 background_tasks=background_tasks,
                 **kwargs,
