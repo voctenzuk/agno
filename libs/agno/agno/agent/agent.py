@@ -1244,6 +1244,9 @@ class Agent:
                         run_response=run_response, session=session, run_context=run_context, user_id=user_id
                     )
 
+                    if raise_on_error:
+                        raise
+
                     return run_response
         finally:
             # Cancel background futures on error (wait_for_open_threads handles waiting on success)
@@ -1269,6 +1272,7 @@ class Agent:
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
+        raise_on_error: bool = False,
         stream_events: bool = False,
         yield_run_output: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
@@ -1636,6 +1640,9 @@ class Agent:
                         run_response=run_response, session=session, run_context=run_context, user_id=user_id
                     )
 
+                    if raise_on_error:
+                        raise
+
                     yield run_error
         finally:
             # Cancel background futures on error (wait_for_thread_tasks_stream handles waiting on success)
@@ -1908,6 +1915,7 @@ class Agent:
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
                 response_format=response_format,
+                raise_on_error=raise_on_error,
                 stream_events=stream_events,
                 yield_run_output=yield_run_output,
                 debug_mode=debug_mode,
@@ -2253,6 +2261,9 @@ class Agent:
                         user_id=user_id,
                     )
 
+                    if raise_on_error:
+                        raise
+
                     return run_response
         finally:
             # Always disconnect connectable tools
@@ -2289,6 +2300,7 @@ class Agent:
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
+        raise_on_error: bool = False,
         stream_events: bool = False,
         yield_run_output: Optional[bool] = None,
         debug_mode: Optional[bool] = None,
@@ -2667,6 +2679,9 @@ class Agent:
                         user_id=user_id,
                     )
 
+                    if raise_on_error:
+                        raise
+
                     # Yield the error event
                     yield run_error
                     break
@@ -2984,6 +2999,7 @@ class Agent:
                 add_history_to_context=add_history,
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
+                raise_on_error=raise_on_error,
                 debug_mode=debug_mode,
                 background_tasks=background_tasks,
                 **kwargs,
