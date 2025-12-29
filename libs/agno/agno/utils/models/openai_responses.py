@@ -14,7 +14,7 @@ def _process_bytes_image(image: bytes) -> Dict[str, Any]:
     return {"type": "input_image", "image_url": image_url}
 
 
-def _process_image_path(image_path: Union[Path, str]) -> Dict[str, Any]:
+def _process_image_path(image_path: Union[Path, str]) -> Optional[Dict[str, Any]]:
     """Process image ( file path)."""
     # Process local file image
     import base64
@@ -22,13 +22,18 @@ def _process_image_path(image_path: Union[Path, str]) -> Dict[str, Any]:
 
     path = image_path if isinstance(image_path, Path) else Path(image_path)
     if not path.exists():
-        raise FileNotFoundError(f"Image file not found: {image_path}")
+        logger.warning(f"Image file not found: {image_path}. Skipping image.")
+        return None
 
     mime_type = mimetypes.guess_type(image_path)[0] or "image/jpeg"
-    with open(path, "rb") as image_file:
-        base64_image = base64.b64encode(image_file.read()).decode("utf-8")
-        image_url = f"data:{mime_type};base64,{base64_image}"
-        return {"type": "input_image", "image_url": image_url}
+    try:
+        with open(path, "rb") as image_file:
+            base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+            image_url = f"data:{mime_type};base64,{base64_image}"
+            return {"type": "input_image", "image_url": image_url}
+    except Exception as e:
+        logger.warning(f"Failed to read image file {path}: {e}. Skipping image.")
+        return None
 
 
 def _process_image_url(image_url: str) -> Dict[str, Any]:

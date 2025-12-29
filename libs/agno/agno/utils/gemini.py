@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 from pydantic import BaseModel
 
 from agno.media import Image
-from agno.utils.log import log_error, log_warning
+from agno.utils.log import log_warning
 
 try:
     from google.genai.types import (
@@ -153,8 +153,8 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
                 with open(image_path, "rb") as f:
                     content_bytes = f.read()
             else:
-                log_error(f"Image file {image_path} does not exist.")
-                raise
+                log_warning(f"Image file {image_path} does not exist. Skipping image.")
+                return None
             return {
                 "mime_type": "image/jpeg",
                 "data": content_bytes,

@@ -2,7 +2,7 @@ from typing import Any, List, Optional, Union
 
 from agno.media import Image
 from agno.models.message import Message
-from agno.utils.log import log_error, log_warning
+from agno.utils.log import log_warning
 
 try:
     # TODO: Adapt these imports to the new Mistral SDK versions
@@ -32,8 +32,8 @@ def _format_image_for_message(image: Image) -> Optional[ImageURLChunk]:
 
         path = Path(image.filepath) if isinstance(image.filepath, str) else image.filepath
         if not path.exists() or not path.is_file():
-            log_error(f"Image file not found: {image}")
-            raise FileNotFoundError(f"Image file not found: {image}")
+            log_warning(f"Image file not found: {image}. Skipping image.")
+            return None
 
         with open(image.filepath, "rb") as image_file:
             base64_image = base64.b64encode(image_file.read()).decode("utf-8")
