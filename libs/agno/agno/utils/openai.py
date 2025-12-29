@@ -114,14 +114,16 @@ def _process_bytes_image(image: bytes, image_format: Optional[str] = None) -> Di
     return {"type": "image_url", "image_url": {"url": image_url}}
 
 
-def _process_image_path(image_path: Union[Path, str]) -> Dict[str, Any]:
+def _process_image_path(image_path: Union[Path, str]) -> Optional[Dict[str, Any]]:
     """Process image ( file path)."""
     # Process local file image
     path = Path(image_path)  # Ensure it's a Path object
     if not path.exists():
-        raise FileNotFoundError(f"Image file not found: {image_path}")
+        log_warning(f"Image file not found: {image_path}. Skipping image.")
+        return None
     if not path.is_file():
-        raise IsADirectoryError(f"Image path is not a file: {image_path}")
+        log_warning(f"Image path is not a file: {image_path}. Skipping image.")
+        return None
 
     mime_type = mimetypes.guess_type(path)[0] or "image/jpeg"  # Default to jpeg if guess fails
     try:
@@ -130,8 +132,8 @@ def _process_image_path(image_path: Union[Path, str]) -> Dict[str, Any]:
             image_url = f"data:{mime_type};base64,{base64_image}"
             return {"type": "image_url", "image_url": {"url": image_url}}
     except Exception as e:
-        log_error(f"Failed to read image file {path}: {e}")
-        raise  # Re-raise the exception after logging
+        log_warning(f"Failed to read image file {path}: {e}. Skipping image.")
+        return None
 
 
 def _process_image_url(image_url: str) -> Dict[str, Any]:
