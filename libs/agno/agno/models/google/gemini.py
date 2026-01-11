@@ -1053,6 +1053,20 @@ class Gemini(Model):
 
             # Raise if the request failed because of a malformed function call
             if hasattr(candidate, "finish_reason") and candidate.finish_reason:
+                if model_response.provider_data is None:
+                    model_response.provider_data = {}
+                model_response.provider_data["finishReason"] = candidate.finish_reason
+                finish_reason_category = {
+                    GeminiFinishReason.STOP.value: "stop",
+                    GeminiFinishReason.MAX_TOKENS.value: "limit",
+                    GeminiFinishReason.SAFETY.value: "blocked",
+                    GeminiFinishReason.RECITATION.value: "blocked",
+                    GeminiFinishReason.MALFORMED_FUNCTION_CALL.value: "error",
+                    GeminiFinishReason.OTHER.value: "error",
+                }.get(candidate.finish_reason, "unknown")
+                model_response.provider_data["finishReasonCategory"] = finish_reason_category
+                if hasattr(candidate, "finish_message") and candidate.finish_message is not None:
+                    model_response.provider_data["finishMessage"] = candidate.finish_message
                 if candidate.finish_reason == GeminiFinishReason.MALFORMED_FUNCTION_CALL.value:
                     if self.retry_with_guidance:
                         raise RetryableModelProviderError(
@@ -1217,6 +1231,20 @@ class Gemini(Model):
 
             # Raise if the request failed because of a malformed function call
             if hasattr(candidate, "finish_reason") and candidate.finish_reason:
+                if model_response.provider_data is None:
+                    model_response.provider_data = {}
+                model_response.provider_data["finishReason"] = candidate.finish_reason
+                finish_reason_category = {
+                    GeminiFinishReason.STOP.value: "stop",
+                    GeminiFinishReason.MAX_TOKENS.value: "limit",
+                    GeminiFinishReason.SAFETY.value: "blocked",
+                    GeminiFinishReason.RECITATION.value: "blocked",
+                    GeminiFinishReason.MALFORMED_FUNCTION_CALL.value: "error",
+                    GeminiFinishReason.OTHER.value: "error",
+                }.get(candidate.finish_reason, "unknown")
+                model_response.provider_data["finishReasonCategory"] = finish_reason_category
+                if hasattr(candidate, "finish_message") and candidate.finish_message is not None:
+                    model_response.provider_data["finishMessage"] = candidate.finish_message
                 if candidate.finish_reason == GeminiFinishReason.MALFORMED_FUNCTION_CALL.value:
                     if self.retry_with_guidance:
                         raise RetryableModelProviderError(
