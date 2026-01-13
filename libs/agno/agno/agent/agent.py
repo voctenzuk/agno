@@ -11178,7 +11178,11 @@ class Agent:
         session: AgentSession,
         run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
+        store_session: bool = False,
     ) -> None:
+        if self.store_session_manually and not store_session:
+            return
+
         #  Scrub the stored run based on storage flags
         self._scrub_run_output_for_storage(run_response)
 
