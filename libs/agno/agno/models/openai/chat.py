@@ -843,6 +843,16 @@ class OpenAIChat(Model):
         elif hasattr(response_message, "reasoning") and response_message.reasoning is not None:  # type: ignore
             model_response.reasoning_content = response_message.reasoning  # type: ignore
 
+        if finish_reason:=response.choices[0].get("finish_reason"):
+            if model_response.provider_data is None:
+                model_response.provider_data = {}
+            model_response.provider_data["finish_reason"] = finish_reason
+
+        if native_finish_reason:=response.choices[0].get("native_finish_reason"):
+            if model_response.provider_data is None:
+                model_response.provider_data = {}
+            model_response.provider_data["native_finish_reason"] = native_finish_reason
+
         if response.usage is not None:
             model_response.response_usage = self._get_metrics(response.usage)
 
