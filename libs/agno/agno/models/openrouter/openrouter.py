@@ -157,7 +157,6 @@ class OpenRouter(OpenAILike):
                     model_response.response_usage.cost = total_cost
 
         if include_choices and getattr(response, "choices", None):
-            provider_data["choices"] = [self._get_choice_metadata(choice) for choice in response.choices]
             choice_extra = self._get_model_extra(response.choices[0])
             finish_reason = getattr(response.choices[0], "finish_reason", None) or choice_extra.get("finish_reason")
             native_finish_reason = choice_extra.get("native_finish_reason")
