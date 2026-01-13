@@ -324,6 +324,9 @@ class Agent:
     store_tool_messages: bool = True
     # If True, store history messages in run output
     store_history_messages: bool = True
+    # If true, should save manually
+    store_session_manually = False
+
 
     # --- System message settings ---
     # Provide the system message as a string or function
@@ -11135,7 +11138,12 @@ class Agent:
         session: AgentSession,
         run_context: Optional[RunContext] = None,
         user_id: Optional[str] = None,
-    ) -> None:  #  Scrub the stored run based on storage flags
+        store_session: bool = False,
+    ) -> None:
+        if self.store_session_manually and not store_session:
+            return
+
+        # Scrub the stored run based on storage flags
         self._scrub_run_output_for_storage(run_response)
 
         # Stop the timer for the Run duration
