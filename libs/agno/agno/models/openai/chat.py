@@ -843,15 +843,32 @@ class OpenAIChat(Model):
         elif hasattr(response_message, "reasoning") and response_message.reasoning is not None:  # type: ignore
             model_response.reasoning_content = response_message.reasoning  # type: ignore
 
-        if finish_reason:=response.choices[0].get("finish_reason"):
+        choice = response.choices[0]
+        choice_extra = getattr(choice, "model_extra", None)
+        choice_extra = choice_extra if isinstance(choice_extra, dict) else {}
+
+        finish_reason = getattr(choice, "finish_reason", None) or choice_extra.get("finish_reason")
+        if finish_reason is not None:
             if model_response.provider_data is None:
                 model_response.provider_data = {}
             model_response.provider_data["finish_reason"] = finish_reason
 
-        if native_finish_reason:=response.choices[0].get("native_finish_reason"):
+        native_finish_reason = getattr(choice, "native_finish_reason", None) or choice_extra.get("native_finish_reason")
+        if native_finish_reason is not None:
             if model_response.provider_data is None:
                 model_response.provider_data = {}
             model_response.provider_data["native_finish_reason"] = native_finish_reason
+
+        logprobs = getattr(choice, "logprobs", None) or choice_extra.get("logprobs")
+        if logprobs is not None:
+            if model_response.provider_data is None:
+                model_response.provider_data = {}
+            model_response.provider_data["logprobs"] = logprobs
+
+        if choice_extra:
+            if model_response.provider_data is None:
+                model_response.provider_data = {}
+            model_response.provider_data["choice_model_extra"] = choice_extra
 
         if response.usage is not None:
             model_response.response_usage = self._get_metrics(response.usage)
@@ -863,8 +880,20 @@ class OpenAIChat(Model):
             model_response.provider_data["id"] = response.id
         if response.system_fingerprint:
             model_response.provider_data["system_fingerprint"] = response.system_fingerprint
+        if response.model:
+            model_response.provider_data["model"] = response.model
+        if response.created:
+            model_response.provider_data["created"] = response.created
+        if response.object:
+            model_response.provider_data["object"] = response.object
         if response.model_extra:
             model_response.provider_data["model_extra"] = response.model_extra
+        if hasattr(response_message, "model_extra") and response_message.model_extra:
+            model_response.provider_data["message_model_extra"] = response_message.model_extra
+        if hasattr(response_message, "refusal") and response_message.refusal is not None:
+            model_response.provider_data["refusal"] = response_message.refusal
+        if response.usage is not None and hasattr(response.usage, "model_extra") and response.usage.model_extra:
+            model_response.provider_data["usage_model_extra"] = response.usage.model_extra
 
         return model_response
 
@@ -881,26 +910,45 @@ class OpenAIChat(Model):
         model_response = ModelResponse()
 
         if response_delta.choices and len(response_delta.choices) > 0:
-            choice_delta: ChoiceDelta = response_delta.choices[0].delta
+            choice = response_delta.choices[0]
+            choice_delta: ChoiceDelta = choice.delta
             if choice_delta:
                 # Add content
                 if choice_delta.content is not None:
                     model_response.content = choice_delta.content
 
-                    # We only want to handle these if content is present
-                    if model_response.provider_data is None:
-                        model_response.provider_data = {}
+                if model_response.provider_data is None:
+                    model_response.provider_data = {}
 
-                    if response_delta.id:
-                        model_response.provider_data["id"] = response_delta.id
-                    if response_delta.system_fingerprint:
-                        model_response.provider_data["system_fingerprint"] = response_delta.system_fingerprint
-                    if response_delta.model_extra:
-                        model_response.provider_data["model_extra"] = response_delta.model_extra
+                if response_delta.id:
+                    model_response.provider_data["id"] = response_delta.id
+                if response_delta.system_fingerprint:
+                    model_response.provider_data["system_fingerprint"] = response_delta.system_fingerprint
+                if response_delta.model_extra:
+                    model_response.provider_data["model_extra"] = response_delta.model_extra
 
                 # Add tool calls
                 if choice_delta.tool_calls is not None:
                     model_response.tool_calls = choice_delta.tool_calls  # type: ignore
+
+                choice_extra = getattr(choice, "model_extra", None)
+                choice_extra = choice_extra if isinstance(choice_extra, dict) else {}
+                finish_reason = getattr(choice, "finish_reason", None) or choice_extra.get("finish_reason")
+                if finish_reason is not None:
+                    model_response.provider_data["finish_reason"] = finish_reason
+
+                native_finish_reason = (
+                    getattr(choice, "native_finish_reason", None) or choice_extra.get("native_finish_reason")
+                )
+                if native_finish_reason is not None:
+                    model_response.provider_data["native_finish_reason"] = native_finish_reason
+
+                logprobs = getattr(choice, "logprobs", None) or choice_extra.get("logprobs")
+                if logprobs is not None:
+                    model_response.provider_data["logprobs"] = logprobs
+
+                if choice_extra:
+                    model_response.provider_data["choice_model_extra"] = choice_extra
 
                 if hasattr(choice_delta, "reasoning_content") and choice_delta.reasoning_content is not None:
                     model_response.reasoning_content = choice_delta.reasoning_content
