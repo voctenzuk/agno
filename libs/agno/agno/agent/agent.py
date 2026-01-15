@@ -562,7 +562,9 @@ class Agent:
         debug_level: Literal[1, 2] = 1,
         raise_on_error: bool = False,
         telemetry: bool = True,
+        store_session_manually: bool = False
     ):
+        self.store_session_manually = store_session_manually
         self.model = model  # type: ignore[assignment]
         self.name = name
         self.id = id
