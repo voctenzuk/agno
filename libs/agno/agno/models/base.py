@@ -1112,6 +1112,7 @@ class Model(ABC):
         if provider_response.images is not None:
             if provider_response.images:
                 assistant_message.image_output = provider_response.images[-1]  # Taking last (most recent) image
+                assistant_message.images = provider_response.images
 
         # Add video to assistant message
         if provider_response.videos is not None:
