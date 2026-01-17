@@ -251,6 +251,8 @@ class Agent:
     num_history_messages: Optional[int] = None
     # Maximum number of tool calls to include from history (None = no limit)
     max_tool_calls_from_history: Optional[int] = None
+    # If True, attach the most recent assistant image in context to the user message.
+    attach_last_assistant_image_to_user_message: bool = False
 
     # --- Knowledge ---
     knowledge: Optional[Knowledge] = None
@@ -491,6 +493,7 @@ class Agent:
         num_history_runs: Optional[int] = None,
         num_history_messages: Optional[int] = None,
         max_tool_calls_from_history: Optional[int] = None,
+        attach_last_assistant_image_to_user_message: bool = False,
         store_media: bool = True,
         store_tool_messages: bool = True,
         store_history_messages: bool = True,
@@ -615,6 +618,7 @@ class Agent:
             self.num_history_runs = 3
 
         self.max_tool_calls_from_history = max_tool_calls_from_history
+        self.attach_last_assistant_image_to_user_message = attach_last_assistant_image_to_user_message
 
         self.store_media = store_media
         self.store_tool_messages = store_tool_messages
@@ -1693,6 +1697,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -1722,6 +1727,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -1752,6 +1758,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -2795,6 +2802,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -2823,6 +2831,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -2853,6 +2862,7 @@ class Agent:
         add_history_to_context: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
         output_schema: Optional[Union[Type[BaseModel], Dict[str, Any]]] = None,
@@ -2918,6 +2928,11 @@ class Agent:
             else self.add_session_state_to_context
         )
         add_history = add_history_to_context if add_history_to_context is not None else self.add_history_to_context
+        attach_last_assistant_image = (
+            attach_last_assistant_image_to_user_message
+            if attach_last_assistant_image_to_user_message is not None
+            else self.attach_last_assistant_image_to_user_message
+        )
 
         # Create RunInput to capture the original user input
         run_input = RunInput(
@@ -3017,6 +3032,7 @@ class Agent:
                 add_history_to_context=add_history,
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
+                attach_last_assistant_image_to_user_message=attach_last_assistant_image,
                 raise_on_error=raise_on_error,
                 debug_mode=debug_mode,
                 background_tasks=background_tasks,
@@ -3032,6 +3048,7 @@ class Agent:
                 add_history_to_context=add_history,
                 add_dependencies_to_context=add_dependencies,
                 add_session_state_to_context=add_session_state,
+                attach_last_assistant_image_to_user_message=attach_last_assistant_image,
                 raise_on_error=raise_on_error,
                 debug_mode=debug_mode,
                 background_tasks=background_tasks,
@@ -8533,6 +8550,17 @@ class Agent:
     def _get_formatted_session_state_for_system_message(self, session_state: Dict[str, Any]) -> str:
         return f"\n<session_state>\n{session_state}\n</session_state>\n\n"
 
+    def _get_last_assistant_image_from_messages(self, messages: Sequence[Message]) -> Optional[Image]:
+        assistant_message_role = self.model.assistant_message_role if self.model is not None else "assistant"
+        for message in reversed(messages):
+            if message.role != assistant_message_role:
+                continue
+            if message.image_output is not None:
+                return message.image_output
+            if message.images:
+                return message.images[-1]
+        return None
+
     def _get_user_message(
         self,
         *,
@@ -8894,6 +8922,7 @@ class Agent:
         videos: Optional[Sequence[Video]] = None,
         files: Optional[Sequence[File]] = None,
         add_history_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
         tools: Optional[List[Union[Function, dict]]] = None,
@@ -8968,8 +8997,15 @@ class Agent:
                 else:
                     run_response.additional_input.extend(messages_to_add_to_run_response)
 
+        attach_last_assistant_image = (
+            attach_last_assistant_image_to_user_message
+            if attach_last_assistant_image_to_user_message is not None
+            else self.attach_last_assistant_image_to_user_message
+        )
+
         # 3. Add history to run_messages
-        if add_history_to_context:
+        history_messages: List[Message] = []
+        if add_history_to_context or attach_last_assistant_image:
             from copy import deepcopy
 
             # Only skip messages from history when system_message_role is NOT a standard conversation role.
@@ -8998,9 +9034,11 @@ class Agent:
                 if self.max_tool_calls_from_history is not None:
                     filter_tool_calls(history_copy, self.max_tool_calls_from_history)
 
+                history_messages = history_copy
                 log_debug(f"Adding {len(history_copy)} messages from history")
 
-                run_messages.messages += history_copy
+                if add_history_to_context:
+                    run_messages.messages += history_copy
 
         # 4. Add user message to run_messages
         user_message: Optional[Message] = None
@@ -9017,6 +9055,14 @@ class Agent:
                 )
             )
         ):
+            if attach_last_assistant_image:
+                messages_for_last_image = run_messages.messages
+                if history_messages and not add_history_to_context:
+                    messages_for_last_image = run_messages.messages + history_messages
+                last_assistant_image = self._get_last_assistant_image_from_messages(messages_for_last_image)
+                if last_assistant_image is not None:
+                    images = [*images, last_assistant_image] if images is not None else [last_assistant_image]
+
             user_message = self._get_user_message(
                 run_response=run_response,
                 run_context=run_context,
@@ -9099,6 +9145,7 @@ class Agent:
         files: Optional[Sequence[File]] = None,
         knowledge_filters: Optional[Union[Dict[str, Any], List[FilterExpr]]] = None,
         add_history_to_context: Optional[bool] = None,
+        attach_last_assistant_image_to_user_message: Optional[bool] = None,
         dependencies: Optional[Dict[str, Any]] = None,
         add_dependencies_to_context: Optional[bool] = None,
         add_session_state_to_context: Optional[bool] = None,
@@ -9181,8 +9228,15 @@ class Agent:
                 else:
                     run_response.additional_input.extend(messages_to_add_to_run_response)
 
+        attach_last_assistant_image = (
+            attach_last_assistant_image_to_user_message
+            if attach_last_assistant_image_to_user_message is not None
+            else self.attach_last_assistant_image_to_user_message
+        )
+
         # 3. Add history to run_messages
-        if add_history_to_context:
+        history_messages: List[Message] = []
+        if add_history_to_context or attach_last_assistant_image:
             from copy import deepcopy
 
             # Only skip messages from history when system_message_role is NOT a standard conversation role.
@@ -9211,9 +9265,11 @@ class Agent:
                 if self.max_tool_calls_from_history is not None:
                     filter_tool_calls(history_copy, self.max_tool_calls_from_history)
 
+                history_messages = history_copy
                 log_debug(f"Adding {len(history_copy)} messages from history")
 
-                run_messages.messages += history_copy
+                if add_history_to_context:
+                    run_messages.messages += history_copy
 
         # 4. Add user message to run_messages
         user_message: Optional[Message] = None
@@ -9230,6 +9286,14 @@ class Agent:
                 )
             )
         ):
+            if attach_last_assistant_image:
+                messages_for_last_image = run_messages.messages
+                if history_messages and not add_history_to_context:
+                    messages_for_last_image = run_messages.messages + history_messages
+                last_assistant_image = self._get_last_assistant_image_from_messages(messages_for_last_image)
+                if last_assistant_image is not None:
+                    images = [*images, last_assistant_image] if images is not None else [last_assistant_image]
+
             user_message = await self._aget_user_message(
                 run_response=run_response,
                 run_context=run_context,
