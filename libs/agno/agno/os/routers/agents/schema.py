@@ -55,6 +55,7 @@ class AgentResponse(BaseModel):
         agent_defaults = {
             # Sessions defaults
             "add_history_to_context": False,
+            "attach_last_assistant_image_to_user_message": False,
             "num_history_runs": 3,
             "enable_session_summaries": False,
             "search_session_history": False,
@@ -144,6 +145,7 @@ class AgentResponse(BaseModel):
         sessions_info = {
             "session_table": session_table,
             "add_history_to_context": agent.add_history_to_context,
+            "attach_last_assistant_image_to_user_message": agent.attach_last_assistant_image_to_user_message,
             "enable_session_summaries": agent.enable_session_summaries,
             "num_history_runs": agent.num_history_runs,
             "search_session_history": agent.search_session_history,
