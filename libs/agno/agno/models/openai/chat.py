@@ -329,9 +329,9 @@ class OpenAIChat(Model):
 
         # Ignore non-string message content
         # because we assume that the images/audio are already added to the message
-        if (message.images is not None and len(message.images) > 0) or (
+        if message.role == "user" and ((message.images is not None and len(message.images) > 0) or (
             message.audio is not None and len(message.audio) > 0
-        ):
+        )):
             # Ignore non-string message content
             # because we assume that the images/audio are already added to the message
             if isinstance(message.content, str):
