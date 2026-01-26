@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Type, Union
 from pydantic import BaseModel
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
-from agno.exceptions import ModelAuthenticationError
+from agno.exceptions import ModelAuthenticationError, ModelProviderError
 from agno.models.openai.like import OpenAILike
 from agno.models.response import ModelResponse
 from agno.run.agent import RunOutput
@@ -170,6 +170,12 @@ class OpenRouter(OpenAILike):
         response: ChatCompletion,
         response_format: Optional[Union[Dict, Type[BaseModel]]] = None,
     ) -> ModelResponse:
+        if response.choices is None or len(response.choices) == 0:
+            raise ModelProviderError(
+                message="Empty response from OpenRouter",
+                model_name=self.name,
+                model_id=self.id,
+            )
         model_response = super()._parse_provider_response(response, response_format=response_format)
         self._apply_openrouter_metadata(model_response, response)
         return model_response
