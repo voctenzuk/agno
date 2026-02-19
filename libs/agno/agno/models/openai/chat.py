@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+import base64
 from dataclasses import dataclass
 from os import getenv
 from typing import Any, Dict, Iterator, List, Literal, Optional, Type, Union
@@ -772,8 +773,12 @@ class OpenAIChat(Model):
         if response_message.content is not None:
             model_response.content = response_message.content
 
+            # OpenRouter may return multipart content where text/image parts are inline
+            # in `message.content` (instead of exposing images in `model_extra`).
+            self._normalize_multipart_content(model_response)
+
             # Extract thinking content before any structured parsing
-            if model_response.content:
+            if isinstance(model_response.content, str) and model_response.content:
                 reasoning_content, output_content = extract_thinking_content(model_response.content)
                 if reasoning_content:
                     model_response.reasoning_content = reasoning_content
@@ -857,6 +862,67 @@ class OpenAIChat(Model):
             model_response.provider_data["model_extra"] = response.model_extra
 
         return model_response
+
+    @staticmethod
+    def _parse_image_from_content_part(image_part: Dict[str, Any]) -> Optional[Image]:
+        image_url_data = image_part.get("image_url")
+        image_url: Optional[str] = None
+
+        if isinstance(image_url_data, dict):
+            parsed_url = image_url_data.get("url")
+            if isinstance(parsed_url, str):
+                image_url = parsed_url
+        elif isinstance(image_url_data, str):
+            image_url = image_url_data
+
+        if not image_url:
+            return None
+
+        if image_url.startswith("data:"):
+            data_header, _, base64_data = image_url.partition(",")
+            if not base64_data:
+                return None
+
+            mime_type = None
+            if ";base64" in data_header:
+                mime_type = data_header[5:].split(";")[0] or None
+
+            try:
+                content = base64.b64decode(base64_data, validate=True)
+            except Exception as e:
+                log_warning(f"Failed to decode base64 image in content part: {e}")
+                return None
+
+            return Image(content=content, mime_type=mime_type)
+
+        return Image(url=image_url)
+
+    def _normalize_multipart_content(self, model_response: ModelResponse) -> None:
+        if not isinstance(model_response.content, list):
+            return
+
+        text_parts: List[str] = []
+        images: List[Image] = []
+
+        for content_part in model_response.content:
+            if not isinstance(content_part, dict):
+                continue
+
+            part_type = content_part.get("type")
+            if part_type in {"text", "output_text"}:
+                text_value = content_part.get("text")
+                if isinstance(text_value, str) and text_value:
+                    text_parts.append(text_value)
+            elif part_type == "image_url":
+                parsed_image = self._parse_image_from_content_part(content_part)
+                if parsed_image is not None:
+                    images.append(parsed_image)
+
+        model_response.content = "\n".join(text_parts) if text_parts else None
+        if images:
+            if model_response.images is None:
+                model_response.images = []
+            model_response.images.extend(images)
 
     def _parse_provider_response_delta(self, response_delta: ChatCompletionChunk) -> ModelResponse:
         """
